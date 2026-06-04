@@ -30,7 +30,7 @@ const globalForQueue = globalThis as unknown as { documentQueue?: Queue<Document
 export const documentQueue =
   globalForQueue.documentQueue ??
   new Queue<DocumentJobData>(DOCUMENT_QUEUE_NAME, {
-    connection: createRedisClient(),
+    connection: redisConnection,
     defaultJobOptions: {
       attempts: 3,
       backoff: { type: "exponential", delay: 5000 },

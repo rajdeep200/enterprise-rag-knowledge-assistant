@@ -1,8 +1,11 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Sparkles } from "lucide-react";
@@ -17,9 +20,14 @@ import { useToast } from "@/components/ui/use-toast";
 
 export default function LoginPage() {
   const router = useRouter();
-  const params = useSearchParams();
+  const [redirectPath, setRedirectPath] = useState("/dashboard");
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setRedirectPath(params.get("redirect") ?? "/dashboard");
+  }, []);
 
   const {
     register,
@@ -31,7 +39,7 @@ export default function LoginPage() {
     try {
       await api.post<PublicUser>("/api/auth/login", values);
       await queryClient.invalidateQueries({ queryKey: ["current-user"] });
-      router.replace(params.get("redirect") ?? "/dashboard");
+      router.replace(redirectPath);
       router.refresh();
     } catch (err) {
       toast({

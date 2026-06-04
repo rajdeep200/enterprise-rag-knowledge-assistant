@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { ok, handleRoute } from "@/lib/api-response";
 import { requireAuth } from "@/lib/auth";
 

@@ -12,12 +12,19 @@ import {
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@prisma/client";
 
-const nav = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  exact?: boolean;
+};
+
+const nav: NavItem[] = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard, exact: true },
   { href: "/dashboard/documents", label: "Documents", icon: FileText },
   { href: "/dashboard/chat", label: "Chat", icon: MessagesSquare },
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
-] as const;
+];
 
 export function AppSidebar({ role }: { role: UserRole }) {
   const pathname = usePathname();
