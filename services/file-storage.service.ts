@@ -14,21 +14,36 @@ function uploadRoot(): string {
  * Deliberately small interface (save / read / delete / absolutePath) so a future
  * adapter can implement the same contract without touching callers.
  */
-function minioClient() {
+function storageClient() {
+  if (env.STORAGE_ADAPTER === "minio") {
+    return new MinioClient({
+      endPoint: env.MINIO_ENDPOINT!,
+      port: env.MINIO_PORT ?? 9000,
+      useSSL: env.MINIO_USE_SSL ?? false,
+      accessKey: env.MINIO_ACCESS_KEY!,
+      secretKey: env.MINIO_SECRET_KEY!,
+    });
+  }
+
   return new MinioClient({
-    endPoint: env.MINIO_ENDPOINT!,
-    port: env.MINIO_PORT ?? 9000,
-    useSSL: env.MINIO_USE_SSL ?? false,
-    accessKey: env.MINIO_ACCESS_KEY!,
-    secretKey: env.MINIO_SECRET_KEY!,
+    endPoint: env.S3_ENDPOINT || "s3.amazonaws.com",
+    port: 443,
+    useSSL: env.S3_USE_SSL,
+    accessKey: env.S3_ACCESS_KEY_ID!,
+    secretKey: env.S3_SECRET_ACCESS_KEY!,
+    region: env.S3_REGION,
   });
 }
 
 async function ensureBucketExists(bucketName: string) {
-  const client = minioClient();
+  if (env.STORAGE_ADAPTER !== "minio") {
+    return;
+  }
+
+  const client = storageClient();
   const exists = await client.bucketExists(bucketName);
   if (!exists) {
-    await client.makeBucket(bucketName, "us-east-1");
+    await client.makeBucket(bucketName);
   }
 }
 
@@ -40,10 +55,10 @@ export const FileStorageService = {
   }): Promise<{ filePath: string }> {
     const filePath = path.join(params.companyId, `${randomUUID()}${path.extname(params.originalName) || ".pdf"}`);
 
-    if (env.STORAGE_ADAPTER === "minio") {
-      const bucket = env.MINIO_BUCKET!;
+    if (env.STORAGE_ADAPTER === "minio" || env.STORAGE_ADAPTER === "s3") {
+      const bucket = env.STORAGE_ADAPTER === "minio" ? env.MINIO_BUCKET! : env.S3_BUCKET!;
       await ensureBucketExists(bucket);
-      await minioClient().putObject(bucket, filePath, params.buffer);
+      await storageClient().putObject(bucket, filePath, params.buffer);
       return { filePath };
     }
 
@@ -55,9 +70,9 @@ export const FileStorageService = {
   },
 
   async read(filePath: string): Promise<Buffer> {
-    if (env.STORAGE_ADAPTER === "minio") {
-      const bucket = env.MINIO_BUCKET!;
-      const stream = await minioClient().getObject(bucket, filePath);
+    if (env.STORAGE_ADAPTER === "minio" || env.STORAGE_ADAPTER === "s3") {
+      const bucket = env.STORAGE_ADAPTER === "minio" ? env.MINIO_BUCKET! : env.S3_BUCKET!;
+      const stream = await storageClient().getObject(bucket, filePath);
       const chunks: Buffer[] = [];
       for await (const chunk of stream as AsyncIterable<Buffer>) {
         chunks.push(chunk);
@@ -69,10 +84,10 @@ export const FileStorageService = {
   },
 
   async delete(filePath: string): Promise<void> {
-    if (env.STORAGE_ADAPTER === "minio") {
-      const bucket = env.MINIO_BUCKET!;
+    if (env.STORAGE_ADAPTER === "minio" || env.STORAGE_ADAPTER === "s3") {
+      const bucket = env.STORAGE_ADAPTER === "minio" ? env.MINIO_BUCKET! : env.S3_BUCKET!;
       try {
-        await minioClient().removeObject(bucket, filePath);
+        await storageClient().removeObject(bucket, filePath);
       } catch (err) {
         const code = (err as { code?: string }).code;
         if (code !== "NoSuchKey") throw err;
