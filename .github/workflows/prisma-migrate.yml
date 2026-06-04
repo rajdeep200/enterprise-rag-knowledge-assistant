@@ -33,7 +33,7 @@ jobs:
         run: npx prisma migrate deploy
 
       - name: Optional: Run seed (if SECRET RUN_SEED=true)
-        if: secrets.RUN_SEED == 'true'
+        if: ${{ secrets.RUN_SEED == 'true' }}
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm run seed
