@@ -27,6 +27,10 @@ const envSchema = z.object({
   S3_ACCESS_KEY_ID: z.string().optional(),
   S3_SECRET_ACCESS_KEY: z.string().optional(),
   S3_BUCKET: z.string().optional(),
+  PRISMA_CONNECTION_LIMIT: z.preprocess(
+    (val) => (val ? Number(val) : undefined),
+    z.number().int().positive().default(10),
+  ),
 });
 
 const envSchemaWithRefine = envSchema.superRefine((data, ctx) => {
